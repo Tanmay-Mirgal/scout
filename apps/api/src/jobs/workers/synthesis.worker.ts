@@ -182,7 +182,7 @@ export const synthesisJobHandler = async (job: any) => {
  * Worker processing SYNTHESIS jobs from the queue.
  */
 export const synthesisWorker = new Worker(
-  "research-queue",
+  "synthesis-queue",
   synthesisJobHandler,
   {
     connection: getRedisConnection(),

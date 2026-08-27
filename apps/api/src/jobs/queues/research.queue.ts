@@ -29,7 +29,7 @@ export function getRedisConnection(): IORedis {
   });
 }
 
-// Instantiate the Queue
+// Instantiate the Queues
 export const researchQueue = new Queue("research-queue", {
   connection: getRedisConnection(),
   defaultJobOptions: {
@@ -38,4 +38,11 @@ export const researchQueue = new Queue("research-queue", {
   },
 });
 
-export default researchQueue;
+export const synthesisQueue = new Queue("synthesis-queue", {
+  connection: getRedisConnection(),
+  defaultJobOptions: {
+    removeOnComplete: true,
+    removeOnFail: false,
+  },
+});
+
