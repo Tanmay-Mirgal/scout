@@ -174,7 +174,45 @@ Follow these strict guidelines:
 3. DO NOT invent facts, statistics, or sources.
 4. Any claims/findings you cite MUST reference actual source IDs from the allowable citations list.
 5. If there are failed research tasks, you MUST list them as methodology limitations.
-6. Return your report in JSON format conforming to the requested schema.`;
+6. Return your report in JSON format conforming strictly to the requested schema.
+
+Your output MUST be a valid JSON object matching this schema format:
+{
+  "title": "Title of the research report",
+  "executiveSummary": "Executive summary of the report",
+  "researchQuestion": "The original research question",
+  "methodology": {
+    "overview": "Overview of the research methodology",
+    "tasksCompleted": 8, // number of completed tasks
+    "tasksFailed": 0,    // number of failed tasks
+    "sourcesAnalyzed": 5  // number of sources analyzed
+  },
+  "keyFindings": [
+    {
+      "finding": "Short statement of a key finding",
+      "confidence": 0.95, // float between 0 and 1
+      "citations": ["source-uuid-1"] // array of valid source IDs cited for this finding
+    }
+  ],
+  "detailedAnalysis": [
+    {
+      "sectionTitle": "Title of this section",
+      "content": "Detailed paragraphs of analytical content",
+      "citations": ["source-uuid-1", "source-uuid-2"] // array of valid source IDs cited for this section
+    }
+  ],
+  "contradictions": [
+    {
+      "topic": "Topic of contradiction or conflict",
+      "explanation": "Explanation of contradicting findings in the sources",
+      "citations": ["source-uuid-2"] // array of valid source IDs cited
+    }
+  ],
+  "limitations": [
+    "Limitation details such as missing data, scope bounds, or failed tasks"
+  ],
+  "conclusion": "Final concluding remarks"
+}`;
 
       const userPrompt = `### Original Research Session Details
 Question: "${reportContext.query}"

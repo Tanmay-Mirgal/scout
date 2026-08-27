@@ -36,6 +36,12 @@ export const synthesisJobHandler = async (job: any) => {
     return;
   }
 
+  const firstTaskId = session.tasks[0]?.id;
+  if (!firstTaskId) {
+    console.error(`[Worker] Synthesis failed: No tasks found for session ${researchSessionId}`);
+    return;
+  }
+
   // 3. Verify minimum evidence requirements before generating report
   const supportedClaimsCount = await prisma.claim.count({
     where: { researchSessionId, status: "SUPPORTED" },
@@ -55,7 +61,7 @@ export const synthesisJobHandler = async (job: any) => {
     await prisma.agentRun.create({
       data: {
         researchSessionId,
-        researchTaskId: "00000000-0000-0000-0000-000000000000",
+        researchTaskId: firstTaskId,
         agentType: "SYNTHESIS",
         status: "FAILED",
         input: { reason: "Insufficient supported claims to synthesize a valid final report." } as any,
@@ -71,7 +77,7 @@ export const synthesisJobHandler = async (job: any) => {
   const agentRun = await prisma.agentRun.create({
     data: {
       researchSessionId,
-      researchTaskId: "00000000-0000-0000-0000-000000000000",
+      researchTaskId: firstTaskId,
       agentType: "SYNTHESIS",
       status: "RUNNING",
       input: { researchSessionId } as any,
@@ -84,7 +90,7 @@ export const synthesisJobHandler = async (job: any) => {
     const synthesisAgent = AgentRegistry.get("SYNTHESIS");
     const agentResult = await synthesisAgent.execute({
       researchSessionId,
-      researchTaskId: "00000000-0000-0000-0000-000000000000",
+      researchTaskId: firstTaskId,
       query: session.query,
     });
 

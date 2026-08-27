@@ -112,19 +112,23 @@ export async function evaluateSessionTerminalState(sessionId: string) {
       },
     });
 
+    const firstTaskId = allTasks[0]?.id;
+
     // Create a failed AgentRun log for Synthesis tracking
-    await prisma.agentRun.create({
-      data: {
-        researchSessionId: sessionId,
-        researchTaskId: "00000000-0000-0000-0000-000000000000", // Synthesized root task ID
-        agentType: "SYNTHESIS",
-        status: "FAILED",
-        input: { reason: "Insufficient completed research tasks to trigger report synthesis." } as any,
-        error: `Insufficient completed tasks. Completed: ${completedTasksCount}, Failed: ${failedTasksCount}, Required: ${minCompleted}`,
-        startedAt: new Date(),
-        completedAt: new Date(),
-      },
-    });
+    if (firstTaskId) {
+      await prisma.agentRun.create({
+        data: {
+          researchSessionId: sessionId,
+          researchTaskId: firstTaskId, // Synthesized root task ID
+          agentType: "SYNTHESIS",
+          status: "FAILED",
+          input: { reason: "Insufficient completed research tasks to trigger report synthesis." } as any,
+          error: `Insufficient completed tasks. Completed: ${completedTasksCount}, Failed: ${failedTasksCount}, Required: ${minCompleted}`,
+          startedAt: new Date(),
+          completedAt: new Date(),
+        },
+      });
+    }
   }
 }
 
