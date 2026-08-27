@@ -428,16 +428,81 @@ We aim to create a modular project where contributors can work on independent co
 
 # 🚀 Getting Started
 
-The project is currently under active planning and initial development.
+> SCOUT is in early development. The following instructions set up the development environment.
 
-Initial setup instructions and contribution guidelines will be added as the core architecture is implemented.
+## Prerequisites
 
-For now, you can:
+- **Node.js** >= 20
+- **npm** >= 10
+- **Docker** and **Docker Compose** (for PostgreSQL and Redis)
 
-1. ⭐ Star the repository
-2. 👀 Watch the project for updates
-3. 🐛 Explore upcoming issues
-4. 🤝 Join the project as a contributor
+## 1. Clone the repository
+
+```bash
+git clone https://github.com/Tanmay-Mirgal/scout.git
+cd scout
+```
+
+## 2. Install dependencies
+
+```bash
+npm install
+```
+
+This installs dependencies for all workspaces (`apps/web`, `apps/api`, `packages/shared`, `packages/config`).
+
+## 3. Set up environment files
+
+```bash
+# Backend
+cp apps/api/.env.example apps/api/.env
+
+# Frontend
+cp apps/web/.env.example apps/web/.env.local
+```
+
+## 4. Start infrastructure (PostgreSQL + Redis)
+
+```bash
+docker compose up -d
+```
+
+## 5. Run the development servers
+
+Start both frontend and backend together:
+
+```bash
+npm run dev
+```
+
+Or run them individually:
+
+```bash
+npm run dev:web   # Next.js → http://localhost:3000
+npm run dev:api   # Fastify → http://localhost:4000
+```
+
+## Available Commands
+
+| Command | Description |
+|---|---|
+| `npm install` | Install all workspace dependencies |
+| `npm run dev` | Start frontend and backend concurrently |
+| `npm run dev:web` | Start the Next.js frontend only |
+| `npm run dev:api` | Start the Fastify backend only |
+| `npm run build` | Build all workspaces |
+| `npm run lint` | Lint all workspaces |
+| `npm run test` | Run tests across all workspaces |
+
+## Health Check
+
+Once the backend is running:
+
+```bash
+curl http://localhost:4000/health
+# → { "status": "ok", "service": "scout-api" }
+```
+
 
 ---
 

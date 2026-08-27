@@ -23,6 +23,7 @@ out/
 .next/
 .vercel
 next-env.d.ts
+apps/web/out/
 
 # ====================
 # Fastify / Node Backend
