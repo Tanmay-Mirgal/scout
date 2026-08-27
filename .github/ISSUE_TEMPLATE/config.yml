@@ -2,9 +2,9 @@ blank_issues_enabled: false
 
 contact_links:
   - name: 💬 SCOUT Discussions
-    url: https://github.com/YOUR_GITHUB_USERNAME/scout/discussions
+    url: https://github.com/Tanmay-Mirgal/scout/discussions
     about: Ask questions, share ideas, and discuss SCOUT with the community.
 
   - name: 📖 SCOUT Documentation
-    url: https://github.com/YOUR_GITHUB_USERNAME/scout/tree/main/docs
+    url: https://github.com/Tanmay-Mirgal/scout/tree/main/docs
     about: Please check the project documentation before opening an issue.
