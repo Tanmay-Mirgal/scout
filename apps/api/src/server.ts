@@ -9,12 +9,12 @@ async function main(): Promise<void> {
   const app = await buildApp();
 
   try {
-    await app.listen({ port: env.PORT, host: env.HOST });
+    await app.listen({ port: env.API_PORT, host: env.API_HOST });
 
     console.log("");
     console.log("🚀 SCOUT API is running");
-    console.log(`   ➜  Local:  http://localhost:${env.PORT}`);
-    console.log(`   ➜  Health: http://localhost:${env.PORT}/health`);
+    console.log(`   ➜  Local:  http://localhost:${env.API_PORT}`);
+    console.log(`   ➜  Health: http://localhost:${env.API_PORT}/health`);
     console.log("");
   } catch (err) {
     app.log.error(err);

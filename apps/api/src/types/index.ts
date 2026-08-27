@@ -13,9 +13,14 @@ export interface ApiResponse<T = unknown> {
 }
 
 /**
- * Standard health check response.
+ * Enhanced health check response.
  */
 export interface HealthResponse {
   status: "ok" | "degraded" | "error";
   service: string;
+  timestamp: string;
+  services: {
+    database: "connected" | "disconnected";
+    redis: "connected" | "disconnected";
+  };
 }

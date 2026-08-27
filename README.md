@@ -434,7 +434,7 @@ We aim to create a modular project where contributors can work on independent co
 
 - **Node.js** >= 20
 - **npm** >= 10
-- **Docker** and **Docker Compose** (for PostgreSQL and Redis)
+- **Docker** and **Docker Compose** (for running Redis locally)
 
 ## 1. Clone the repository
 
@@ -451,25 +451,42 @@ npm install
 
 This installs dependencies for all workspaces (`apps/web`, `apps/api`, `packages/shared`, `packages/config`).
 
-## 3. Set up environment files
+## 3. Set up environment variables
+
+SCOUT uses a single, centralized environment file at the root of the repository:
 
 ```bash
-# Backend
-cp apps/api/.env.example apps/api/.env
-
-# Frontend
-cp apps/web/.env.example apps/web/.env.local
+cp .env.example .env
 ```
 
-## 4. Start infrastructure (PostgreSQL + Redis)
+Open the newly created `.env` file and configure your credentials:
+1. **DATABASE_URL**: Paste your Neon PostgreSQL connection string.
+2. **REDIS_URL**: Defaults to `redis://localhost:6379`.
+3. Configure optional AI provider API keys as needed.
+
+## 4. Start local Redis infrastructure
 
 ```bash
-docker compose up -d
+npm run docker:up
 ```
 
-## 5. Run the development servers
+This starts Redis in a detached container.
 
-Start both frontend and backend together:
+## 5. Run database migrations & generate client
+
+Ensure your `DATABASE_URL` is set in the `.env` file first, then run:
+
+```bash
+# Enable pgvector extension and create initial tables
+npm run db:migrate
+
+# Generate the Prisma client
+npm run db:generate
+```
+
+## 6. Run the development servers
+
+Start both the Next.js frontend and Fastify backend together:
 
 ```bash
 npm run dev
@@ -490,6 +507,11 @@ npm run dev:api   # Fastify → http://localhost:4000
 | `npm run dev` | Start frontend and backend concurrently |
 | `npm run dev:web` | Start the Next.js frontend only |
 | `npm run dev:api` | Start the Fastify backend only |
+| `npm run docker:up` | Start local Redis container |
+| `npm run docker:down` | Stop local Redis container |
+| `npm run db:migrate` | Run database migrations using Prisma |
+| `npm run db:generate` | Generate Prisma client |
+| `npm run db:studio` | Open Prisma Studio database editor |
 | `npm run build` | Build all workspaces |
 | `npm run lint` | Lint all workspaces |
 | `npm run test` | Run tests across all workspaces |

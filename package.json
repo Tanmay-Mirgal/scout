@@ -9,9 +9,15 @@
     "dev": "concurrently --kill-others-on-fail --names \"web,api\" --prefix-colors \"cyan,green\" \"npm run dev:web\" \"npm run dev:api\"",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:api": "npm run dev --workspace=apps/api",
+    "dev:worker": "npm run dev:worker --workspace=apps/api",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "db:generate": "npm run db:generate --workspace=@scout/api",
+    "db:migrate": "npm run db:migrate --workspace=@scout/api",
+    "db:studio": "npm run db:studio --workspace=@scout/api",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

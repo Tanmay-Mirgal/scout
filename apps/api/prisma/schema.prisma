@@ -1,0 +1,270 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum ResearchSessionStatus {
+  DRAFT
+  QUEUED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AgentType {
+  ORCHESTRATOR
+  RESEARCH
+  DATA
+  SOURCE
+  VERIFICATION
+  CRITIC
+  SYNTHESIS
+}
+
+enum AgentRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum SourceType {
+  ARTICLE
+  RESEARCH_PAPER
+  GOVERNMENT_REPORT
+  DATASET
+  DOCUMENTATION
+  NEWS
+  WEBSITE
+  OTHER
+}
+
+enum ClaimStatus {
+  UNVERIFIED
+  SUPPORTED
+  CONTRADICTED
+  INSUFFICIENT_EVIDENCE
+}
+
+enum EvidenceRelationship {
+  SUPPORTS
+  CONTRADICTS
+  RELATES_TO
+}
+
+enum ReportStatus {
+  DRAFT
+  GENERATING
+  COMPLETED
+  FAILED
+  PUBLISHED
+}
+
+// =============================================================================
+// MODELS
+// =============================================================================
+
+model User {
+  id        String            @id @default(uuid())
+  name      String
+  email     String            @unique
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  sessions  ResearchSession[]
+
+  @@map("users")
+}
+
+model ResearchSession {
+  id           String                @id @default(uuid())
+  title        String
+  query        String
+  description  String?
+  status       ResearchSessionStatus @default(DRAFT)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  completedAt  DateTime?
+  userId       String
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks        ResearchTask[]
+  agentRuns    AgentRun[]
+  sources      Source[]
+  evidence     Evidence[]
+  claims       Claim[]
+  reports      Report[]
+
+  @@map("research_sessions")
+  @@index([userId])
+  @@index([status])
+}
+
+model ResearchTask {
+  id                String          @id @default(uuid())
+  title             String
+  description       String?
+  status            TaskStatus      @default(PENDING)
+  priority          TaskPriority    @default(MEDIUM)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  completedAt       DateTime?
+  researchSessionId String
+  researchSession   ResearchSession @relation(fields: [researchSessionId], references: [id], onDelete: Cascade)
+  agentRuns         AgentRun[]
+
+  @@map("research_tasks")
+  @@index([researchSessionId])
+  @@index([status])
+}
+
+model AgentRun {
+  id                String         @id @default(uuid())
+  agentType         AgentType
+  status            AgentRunStatus @default(PENDING)
+  input             Json?
+  output            Json?
+  error             String?
+  metadata          Json?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  researchTaskId    String
+  researchTask      ResearchTask   @relation(fields: [researchTaskId], references: [id], onDelete: Cascade)
+  researchSessionId String
+  researchSession   ResearchSession @relation(fields: [researchSessionId], references: [id], onDelete: Cascade)
+
+  @@map("agent_runs")
+  @@index([researchSessionId])
+  @@index([researchTaskId])
+  @@index([status])
+}
+
+model Source {
+  id                String          @id @default(uuid())
+  title             String
+  url               String
+  author            String?
+  publisher         String?
+  publishedAt       DateTime?
+  accessedAt        DateTime?
+  sourceType        SourceType      @default(WEBSITE)
+  credibilityScore  Float?
+  metadata          Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  researchSessionId String
+  researchSession   ResearchSession @relation(fields: [researchSessionId], references: [id], onDelete: Cascade)
+  evidence          Evidence[]
+
+  @@map("sources")
+  @@index([researchSessionId])
+  @@index([url])
+}
+
+model Evidence {
+  id                String          @id @default(uuid())
+  content           String
+  summary           String?
+  location          String?
+  relevanceScore    Float?
+  confidenceScore   Float?
+  metadata          Json?
+  embedding         Unsupported("vector(1536)")?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  sourceId          String
+  source            Source          @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  researchSessionId String
+  researchSession   ResearchSession @relation(fields: [researchSessionId], references: [id], onDelete: Cascade)
+  claims            ClaimEvidence[]
+
+  @@map("evidence")
+  @@index([researchSessionId])
+  @@index([sourceId])
+}
+
+model Claim {
+  id                String          @id @default(uuid())
+  content           String
+  status            ClaimStatus     @default(UNVERIFIED)
+  confidenceScore   Float?
+  reasoning         String?
+  metadata          Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  researchSessionId String
+  researchSession   ResearchSession @relation(fields: [researchSessionId], references: [id], onDelete: Cascade)
+  evidence          ClaimEvidence[]
+
+  @@map("claims")
+  @@index([researchSessionId])
+}
+
+model ClaimEvidence {
+  id           String               @id @default(uuid())
+  claimId      String
+  claim        Claim                @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  evidenceId   String
+  evidence     Evidence             @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  relationship EvidenceRelationship @default(RELATES_TO)
+  strength     Float?
+  notes        String?
+  createdAt    DateTime             @default(now())
+
+  @@unique([claimId, evidenceId])
+  @@map("claims_evidence")
+}
+
+model Report {
+  id                String          @id @default(uuid())
+  title             String
+  content           String
+  summary           String?
+  version           Int             @default(1)
+  status            ReportStatus    @default(DRAFT)
+  metadata          Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  publishedAt       DateTime?
+  researchSessionId String
+  researchSession   ResearchSession @relation(fields: [researchSessionId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+  @@index([researchSessionId])
+}
+
+// Reusable/existing model representing a foundation for future semantic search and pgvector support
+model DocumentEmbedding {
+  id        String   @id @default(uuid())
+  content   String
+  embedding Unsupported("vector(1536)")? 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("document_embeddings")
+}

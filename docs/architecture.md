@@ -518,6 +518,33 @@ Used for:
 * Background job queuing for long-running Scout operations.
 * Rate limiting for API and AI provider calls.
 
+## Domain Model Schema
+
+The core domain database models are defined in the Prisma schema and mapped to PostgreSQL tables:
+
+```text
+  User (users)
+    └── ResearchSession (research_sessions)
+          ├── ResearchTask (research_tasks)
+          │     └── AgentRun (agent_runs)
+          ├── AgentRun (agent_runs)
+          ├── Source (sources)
+          │     └── Evidence (evidence)
+          │           └── ClaimEvidence (claims_evidence) ── Many-to-Many
+          ├── Evidence (evidence)
+          │           └── ClaimEvidence (claims_evidence) ── Many-to-Many
+          ├── Claim (claims)
+          │     └── ClaimEvidence (claims_evidence) ── Many-to-Many
+          └── Report (reports)
+```
+
+### Key Architectural Decisions
+
+1. **UUID Strategy**: All models use unique UUIDv4 identifiers (`id String @id @default(uuid())`) for data integrity.
+2. **Cascade Deletes**: Foreign key relations are configured with cascade deletes. Deleting a `ResearchSession` automatically removes all tasks, agent runs, sources, claims, and reports associated with that session.
+3. **pgvector Integration**: The `Evidence` model includes an `embedding` field defined as `Unsupported("vector(1536)")?`. This allows PostgreSQL to natively handle vector search operations for future semantic search features.
+4. **Explicit Junction Model**: The association between `Claim` and `Evidence` is managed via the `ClaimEvidence` junction table. This supports complex evidence evaluation by storing attributes like `relationship` (SUPPORTS, CONTRADICTS, RELATES_TO), `strength` scores, and evaluator `notes`.
+
 ---
 
 # Background Processing

@@ -4,21 +4,35 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:worker": "tsx src/worker-entry.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "echo \"No lint configured yet\" && exit 0",
-    "test": "echo \"No tests configured yet\" && exit 0"
+    "test": "vitest run",
+    "db:generate": "dotenv -e ../../.env -- prisma generate",
+    "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "db:studio": "dotenv -e ../../.env -- prisma studio"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.0",
+    "@fastify/swagger": "^8.14.0",
+    "@fastify/swagger-ui": "^4.0.0",
+    "@prisma/client": "^6.0.1",
     "@scout/shared": "*",
-    "dotenv": "^16.4.0",
-    "fastify": "^4.28.0",
-    "zod": "^3.23.0"
+    "@upstash/redis": "^1.38.3",
+    "bullmq": "^6.3.1",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.1",
+    "groq-sdk": "^0.9.0",
+    "ioredis": "^5.4.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "@types/node": "^22.10.1",
+    "dotenv-cli": "^8.0.0",
+    "prisma": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.1"
   }
 }
