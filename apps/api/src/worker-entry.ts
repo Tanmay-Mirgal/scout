@@ -4,6 +4,11 @@ import path from "path";
 // Explicitly load configuration from root .env
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
+import { bootstrapAgents } from "./agents/core/agent.bootstrap";
+
+// Centrally register all SCOUT agents before workers boot/bind
+bootstrapAgents();
+
 import { researchTaskWorker } from "./jobs/workers/research-task.worker";
 import { synthesisWorker } from "./jobs/workers/synthesis.worker";
 

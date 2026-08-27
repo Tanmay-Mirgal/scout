@@ -5,6 +5,8 @@ import type { JobPayload } from "../types/job.types";
 /**
  * Service managing job dispatching and queue insertion operations.
  * Handles deterministic naming for idempotency and duplicate job prevention.
+ *
+ * NOTE: BullMQ job IDs must not contain colons (`:`). Underscores are used instead.
  */
 export class JobService {
   /**
@@ -24,7 +26,7 @@ export class JobService {
       "RESEARCH_TASK",
       payload,
       {
-        jobId: `research-task:${taskId}`, // Deterministic duplicate protection
+        jobId: `research_task_${taskId}`, // Deterministic duplicate protection (no colons — BullMQ forbids them)
         attempts: env.RESEARCH_JOB_ATTEMPTS,
         backoff: {
           type: "exponential",
@@ -52,7 +54,7 @@ export class JobService {
       "SYNTHESIS",
       payload,
       {
-        jobId: `synthesis:${sessionId}`, // Deterministic duplicate protection
+        jobId: `synthesis_${sessionId}`, // Deterministic duplicate protection (no colons — BullMQ forbids them)
         attempts: env.RESEARCH_JOB_ATTEMPTS,
         backoff: {
           type: "exponential",

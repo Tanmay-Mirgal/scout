@@ -149,12 +149,25 @@ export class ResearchController {
     const devUser = await ResearchService.getOrCreateDevUser();
     const validatedParams = sessionParamsSchema.parse(request.params);
 
-    const data = await ResearchSessionExecutionService.startExecution(validatedParams.id, devUser.id);
-
-    return reply.status(200).send({
-      success: true,
-      data,
-    });
+    try {
+      const data = await ResearchSessionExecutionService.startExecution(validatedParams.id, devUser.id);
+      return reply.status(200).send({ success: true, data });
+    } catch (err: any) {
+      if (err.code === "RESEARCH_SESSION_NOT_FOUND") {
+        return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: err.message } });
+      }
+      if (err.code === "UNAUTHORIZED") {
+        return reply.status(403).send({ success: false, error: { code: "FORBIDDEN", message: err.message } });
+      }
+      if (err.code === "CONFLICT") {
+        return reply.status(409).send({ success: false, error: { code: "CONFLICT", message: err.message } });
+      }
+      if (err.code === "RESEARCH_PLAN_NOT_FOUND") {
+        return reply.status(400).send({ success: false, error: { code: "BAD_REQUEST", message: err.message } });
+      }
+      // Re-throw for global error handler
+      throw err;
+    }
   }
 
   /**

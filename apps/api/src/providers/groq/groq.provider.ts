@@ -107,7 +107,7 @@ export class GroqProvider implements AIProvider {
    * Generates a structured JSON object conforming to a Zod schema.
    */
   async generateStructured<T>(request: ProviderRequest, schema: z.ZodType<T>): Promise<T> {
-    const maxRetries = env.RESEARCH_AI_MAX_RETRIES ?? 3;
+    const defaultMaxRetries = env.RESEARCH_AI_MAX_RETRIES ?? 3;
     let attempt = 0;
 
     const jsonInstruction = "\nYour output MUST be a valid JSON object strictly conforming to the requested schema format.";
@@ -120,8 +120,16 @@ export class GroqProvider implements AIProvider {
       systemPrompt,
     };
 
-    while (attempt < maxRetries) {
+    while (true) {
       attempt++;
+      // If we encounter a rate limit, we increase allowed retries to 6
+      const isRateLimitError = (err: any) => 
+        err.status === 429 || 
+        err.message?.includes("rate limit") || 
+        err.message?.includes("429");
+
+      const maxRetries = 6;
+
       try {
         const groq = this.getClient();
         const model = request.model || env.AI_DEFAULT_MODEL || "llama-3.3-70b-versatile";
@@ -155,16 +163,24 @@ export class GroqProvider implements AIProvider {
         const validated = schema.parse(parsed);
         return validated;
       } catch (err: any) {
-        console.error(`[AI JSON Mode Attempt ${attempt}/${maxRetries} failed]: ${err.message}`);
+        const isRateLimit = isRateLimitError(err);
+        const effectiveMax = isRateLimit ? maxRetries : defaultMaxRetries;
+
+        console.error(`[AI JSON Mode Attempt ${attempt}/${effectiveMax} failed]: ${err.message}`);
         
-        if (attempt >= maxRetries) {
-          const error = new Error(`Failed to generate valid structured JSON output after ${maxRetries} attempts: ${err.message}`);
+        if (attempt >= effectiveMax) {
+          const error = new Error(`Failed to generate valid structured JSON output after ${effectiveMax} attempts: ${err.message}`);
           (error as any).code = "AI_GENERATION_FAILED";
           throw error;
         }
 
-        // Exponential backoff wait (e.g. 500ms, 1000ms, 1500ms)
-        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+        // Backoff delay: Rate limits (429) need ~4s to clear, standard errors use exponential 500ms
+        const delayMs = isRateLimit 
+          ? 4000 + Math.random() * 1500 
+          : 500 * attempt;
+
+        console.log(`[Groq Retry] Waiting ${Math.round(delayMs)}ms before retry attempt ${attempt + 1}...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
 

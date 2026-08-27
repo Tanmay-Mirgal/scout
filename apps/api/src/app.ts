@@ -9,10 +9,15 @@ import { redis } from "./lib/redis";
 import { researchRoutes } from "./modules/research/research.routes";
 import { agentsTestRoutes } from "./modules/agents/agents-test.routes";
 
+import { bootstrapAgents } from "./agents/core/agent.bootstrap";
+
 /**
  * Build and configure the Fastify application.
  */
 export async function buildApp() {
+  // Bootstrap all SCOUT agents in registry
+  bootstrapAgents();
+
   const app = Fastify({
     logger: {
       level: process.env.NODE_ENV === "production" ? "warn" : "info",

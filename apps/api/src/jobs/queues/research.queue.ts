@@ -7,7 +7,7 @@ import { env } from "../../config";
  * Sets maxRetriesPerRequest to null as required by BullMQ worker/queue interfaces.
  */
 export function getRedisConnection(): IORedis {
-  if (env.REDIS_URL && (env.REDIS_URL.startsWith("redis://") || env.REDIS_URL.startsWith("rediss://"))) {
+  if (env.REDIS_URL && env.REDIS_URL.trim() !== "" && (env.REDIS_URL.startsWith("redis://") || env.REDIS_URL.startsWith("rediss://"))) {
     return new IORedis(env.REDIS_URL, {
       maxRetriesPerRequest: null,
       connectTimeout: 10000,
