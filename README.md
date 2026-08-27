@@ -280,7 +280,7 @@ The goal is to provide context around disagreement and uncertainty.
 ┌───────────────────────────────────────────────┐
 │               BACKEND API                     │
 │                                               │
-│ Java • Spring Boot                            │
+│ Node.js • TypeScript • Fastify                │
 │                                               │
 │ Authentication • Research Sessions            │
 │ Workflow Management • Reports                 │
@@ -328,13 +328,15 @@ The goal is to provide context around disagreement and uncertainty.
 * **TypeScript**
 * **Tailwind CSS**
 * **shadcn/ui**
-* **React Flow**
+* **React Flow / XYFlow**
 
 ### Backend
 
-* **Java**
-* **Spring Boot**
-* **Spring Security**
+* **Node.js**
+* **TypeScript**
+* **Fastify**
+* **Zod** (validation)
+* **Prisma ORM**
 
 ### AI & Agent Layer
 
@@ -410,7 +412,7 @@ SCOUT is currently in its **early development stage** and is being designed as a
 There are opportunities to contribute across multiple areas:
 
 * 🎨 Frontend Development
-* ☕ Java & Spring Boot
+* 🟢 Node.js & TypeScript Backend
 * 🤖 AI & Agent Systems
 * 🔎 Research Workflows
 * 📊 Data Engineering

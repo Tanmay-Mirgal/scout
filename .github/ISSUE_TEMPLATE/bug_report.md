@@ -59,7 +59,6 @@ Please provide relevant environment information.
 
 - OS:
 - Browser:
-- Java Version:
 - Node.js Version:
 - Project Version / Commit:
 

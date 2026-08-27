@@ -64,6 +64,8 @@ Build the minimum infrastructure required to create and manage research sessions
 * [ ] Initialize Next.js application.
 * [ ] Configure TypeScript.
 * [ ] Configure Tailwind CSS.
+* [ ] Install and configure shadcn/ui.
+* [ ] Install React Flow / XYFlow.
 * [ ] Create application layout.
 * [ ] Build landing page.
 * [ ] Build research workspace.
@@ -71,12 +73,17 @@ Build the minimum infrastructure required to create and manage research sessions
 
 ### Backend
 
-* [ ] Initialize Spring Boot application.
-* [ ] Configure PostgreSQL.
+* [ ] Initialize Node.js + Fastify application.
+* [ ] Configure TypeScript.
+* [ ] Configure environment variables.
+* [ ] Add environment validation with Zod.
+* [ ] Configure PostgreSQL with Prisma ORM.
 * [ ] Define core database schema.
-* [ ] Implement REST API structure.
-* [ ] Add global exception handling.
+* [ ] Add pgvector extension to PostgreSQL.
+* [ ] Implement REST API structure with Zod request validation.
+* [ ] Add centralized error handling.
 * [ ] Add API documentation.
+* [ ] Add testing infrastructure.
 
 ### Core Features
 
@@ -102,8 +109,7 @@ Introduce secure user accounts and workspace ownership.
 
 * [ ] Implement user registration.
 * [ ] Implement login.
-* [ ] Configure Spring Security.
-* [ ] Implement JWT authentication.
+* [ ] Implement JWT authentication with Fastify plugins.
 * [ ] Create user profiles.
 * [ ] Associate research sessions with users.
 * [ ] Add authorization rules.
@@ -423,7 +429,7 @@ SCOUT is designed for contributors with different skill sets.
 | Area             | Possible Contributions                                 |
 | ---------------- | ------------------------------------------------------ |
 | 🎨 Frontend      | Next.js UI, dashboards, workflow visualization         |
-| ☕ Backend        | Spring Boot APIs, authentication, session management   |
+| 🟢 Backend        | Fastify APIs, authentication, session management       |
 | 🤖 AI            | Agent design, orchestration, prompts, LLM integrations |
 | 📊 Data          | Evidence models, semantic search, analytics            |
 | ⚙️ DevOps        | Docker, CI/CD, deployment                              |

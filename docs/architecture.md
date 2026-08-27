@@ -41,7 +41,7 @@ The architecture is designed around five core principles:
 ┌─────────────────────────────────────────────────────────────────┐
 │                         BACKEND API                             │
 │                                                                 │
-│                       Java + Spring Boot                        │
+│              Node.js + TypeScript + Fastify                     │
 │                                                                 │
 │  Authentication │ Research Sessions │ Reports │ User Management │
 └────────────────────────────────┬────────────────────────────────┘
@@ -137,13 +137,13 @@ Each stage produces structured output that can be stored and used by subsequent 
 
 The frontend is responsible for providing a transparent interface into the research process.
 
-### Proposed Stack
+### Stack
 
 * Next.js
 * TypeScript
 * Tailwind CSS
 * shadcn/ui
-* React Flow
+* React Flow / XYFlow
 
 ### Primary Interfaces
 
@@ -194,23 +194,64 @@ Provides structured access to completed investigations and generated reports.
 
 The backend acts as the central API and application layer.
 
-### Proposed Stack
+### Stack
 
-* Java
-* Spring Boot
-* Spring Security
+* Node.js
+* TypeScript
+* Fastify
+* Zod (request and schema validation)
+* Prisma ORM
 
 ### Responsibilities
 
+* REST API — routes, request validation via Zod, and response serialization.
 * Authentication and authorization.
 * Research session management.
-* Task management.
 * Workflow state management.
-* Agent coordination.
-* Report persistence.
-* API communication.
+* Agent orchestration.
+* Task management.
+* Report generation and persistence.
+* Evidence management.
+* Database integration via Prisma ORM.
+* Redis integration for caching, queuing, and rate limiting.
+* AI provider integration through an abstraction layer.
 
-The backend should remain independent from individual AI model implementations.
+The backend remains independent from individual AI model implementations and coordinates agent execution through the Orchestration Engine.
+
+### Conceptual Module Structure
+
+The backend is organized into focused modules to maintain clear boundaries and support independent contribution.
+
+```text
+backend/
+└── src/
+    ├── config/             # Environment and application configuration
+    ├── modules/
+    │   ├── auth/           # Authentication and authorization
+    │   ├── users/          # User management
+    │   ├── research/       # Research session management
+    │   ├── evidence/       # Evidence storage and retrieval
+    │   └── reports/        # Report generation and persistence
+    ├── agents/
+    │   ├── orchestrator/   # Research workflow coordination
+    │   ├── research/       # Research Scout implementation
+    │   ├── data/           # Data Scout implementation
+    │   ├── source/         # Source Scout implementation
+    │   ├── verification/   # Verification Scout implementation
+    │   ├── critic/         # Critic Scout implementation
+    │   └── synthesis/      # Synthesis Scout implementation
+    ├── services/           # Shared application services
+    ├── providers/
+    │   └── ai/             # AI provider abstraction layer
+    ├── plugins/            # Fastify plugins (auth, db, redis)
+    ├── lib/                # Shared utilities and helpers
+    ├── middleware/         # Request middleware
+    ├── types/              # Shared TypeScript types and interfaces
+    ├── app.ts              # Fastify application setup
+    └── server.ts           # Server entry point
+```
+
+This is a conceptual structure intended to guide architectural decisions. The actual implementation will evolve as the project develops.
 
 ---
 
@@ -412,28 +453,32 @@ This structure enables evidence traceability throughout the system.
 
 # AI Provider Layer
 
-SCOUT should use an abstraction layer for LLM providers.
+SCOUT uses an abstraction layer for LLM providers so that the rest of the system remains decoupled from any specific model or vendor.
 
 ```text
                     SCOUT AGENTS
                          │
                          ▼
                   LLM INTERFACE
+                  (Provider Abstraction)
                          │
-          ┌──────────────┼──────────────┐
-          │              │              │
-          ▼              ▼              ▼
-        Gemini        OpenAI        Ollama
+          ┌─────────────┬─────────────┐
+          │             │             │
+          ▼             ▼             ▼
+        Gemini        OpenAI       Anthropic
+                                       │
+                                    Ollama
+                               (Local Models)
 ```
 
 This architecture allows different deployments to select:
 
-* Cloud models.
-* Self-hosted models.
+* Cloud-hosted models.
+* Self-hosted or local models via Ollama.
 * Open-source models.
-* Provider-specific models.
+* Provider-specific APIs.
 
-The rest of the SCOUT architecture should remain unchanged.
+The rest of the SCOUT architecture remains unchanged regardless of which provider is active.
 
 ---
 
@@ -451,23 +496,27 @@ Primary persistent storage for:
 * Reports.
 * Source metadata.
 
+All database access goes through **Prisma ORM**, which provides type-safe queries, schema management, and database migrations.
+
 ## pgvector
+
+A PostgreSQL extension used for vector storage and similarity operations.
 
 Used for:
 
-* Semantic search.
-* Document similarity.
-* Evidence retrieval.
-* Research context retrieval.
+* Semantic search across research content.
+* Document and evidence similarity search.
+* Evidence retrieval based on conceptual relevance.
+* Research context retrieval to support agent reasoning.
 
 ## Redis
 
 Used for:
 
-* Caching.
-* Temporary workflow state.
-* Background jobs.
-* Rate limiting.
+* Caching frequently accessed data.
+* Temporary workflow state during active research sessions.
+* Background job queuing for long-running Scout operations.
+* Rate limiting for API and AI provider calls.
 
 ---
 
@@ -544,7 +593,7 @@ Initial deployment will focus on a containerized environment.
                 Next.js Frontend
                        │
                        ▼
-                 Spring Boot API
+                  Fastify API
                        │
           ┌────────────┼────────────┐
           ▼            ▼            ▼
