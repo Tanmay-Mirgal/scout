@@ -21,6 +21,7 @@ async function executeAgentStep(
     EVIDENCE: "DATA",
     CLAIM: "SYNTHESIS",
     CRITIC: "CRITIC",
+    VERIFICATION: "VERIFICATION",
   };
 
   const dbAgentType = agentTypeMap[agentType.toUpperCase()] || agentType;
@@ -394,6 +395,127 @@ export class ResearchExecutionService {
     }
   }
 
+
+  /**
+   * Runs the Verification Scout step over all session claims before final synthesis.
+   * Evaluates claim consistency across collected sources, updates claim statuses,
+   * and logs the structured verification payload as an AgentRun.
+   */
+  static async executeSessionVerification(sessionId: string) {
+    const session = await prisma.researchSession.findUnique({
+      where: { id: sessionId },
+      include: { tasks: true },
+    });
+
+    if (!session) {
+      throw new Error(`ResearchSession with ID '${sessionId}' was not found.`);
+    }
+
+    const claims = await prisma.claim.findMany({
+      where: { researchSessionId: sessionId },
+      orderBy: { createdAt: "asc" },
+    });
+
+    if (claims.length === 0) {
+      console.log(`[Execution] No claims found for session ${sessionId}. Skipping verification step.`);
+      return null;
+    }
+
+    const firstTaskId = session.tasks[0]?.id;
+    if (!firstTaskId) {
+      throw new Error(`No tasks found for session ${sessionId}. Cannot run verification step.`);
+    }
+
+    const sources = await prisma.source.findMany({
+      where: { researchSessionId: sessionId },
+      orderBy: { credibilityScore: "desc" },
+      take: 25, // Bounded source count keeps the verification prompt manageable
+      include: {
+        evidence: {
+          orderBy: { relevanceScore: "desc" },
+          take: 5,
+          select: { content: true, summary: true },
+        },
+      },
+    });
+
+    const verificationPayload = {
+      claims: claims.map((c: any) => ({
+        content: c.content,
+        status: c.status,
+        reasoning: c.reasoning,
+      })),
+      sources: sources.map((s: any) => ({
+        title: s.title,
+        url: s.url,
+        publisher: s.publisher,
+        credibilityScore: s.credibilityScore ?? 0.5,
+        evidence: (s.evidence || []).map((e: any) => ({
+          // Bound individual excerpts as well as source/evidence counts.
+          content: e.content.slice(0, 2000),
+          summary: e.summary,
+        })),
+      })),
+    };
+
+    const verification = await executeAgentStep(
+      "VERIFICATION",
+      firstTaskId,
+      sessionId,
+      session.query,
+      JSON.stringify(verificationPayload)
+    );
+
+    // Apply verified claim statuses
+    const verifiedClaims = verification?.verifiedClaims || [];
+    for (const verified of verifiedClaims) {
+      const validSupportingSources = Array.isArray(verified.supportingSourceIndexes)
+        ? verified.supportingSourceIndexes.filter(
+            (index: unknown) => {
+              if (!Number.isInteger(index)) return false;
+              const sourceIndex = index as number;
+              return sourceIndex >= 0 && sourceIndex < sources.length && (sources[sourceIndex].evidence || []).length > 0;
+            }
+          )
+        : [];
+      const claim = claims[verified.claimIndex];
+      if (claim && validSupportingSources.length > 0) {
+        await prisma.claim.update({
+          where: { id: claim.id },
+          data: {
+            status: "SUPPORTED",
+            confidenceScore: verified.confidenceScore ?? claim.confidenceScore,
+            reasoning: verified.reasoning || claim.reasoning,
+          },
+        });
+      }
+    }
+
+    // Downgrade claims that could not be corroborated across sources
+    const unsupportedClaims = verification?.unsupportedClaims || [];
+    for (const unsupported of unsupportedClaims) {
+      const claim = claims[unsupported.claimIndex];
+      if (claim) {
+        await prisma.claim.update({
+          where: { id: claim.id },
+          data: {
+            status: "INSUFFICIENT_EVIDENCE",
+            confidenceScore: 0,
+            reasoning: unsupported.reasoning || claim.reasoning,
+          },
+        });
+      }
+    }
+
+    const contradictionCount = (verification?.contradictions || []).length;
+    console.log(
+      `[Execution] Verification step completed for session ${sessionId}: ` +
+      `${verifiedClaims.length} verified, ${unsupportedClaims.length} unsupported, ${contradictionCount} contradictions.`
+    );
+
+    return verification;
+  }
+
   /**
    * Runs sequentially through all PENDING research tasks of a session.
    * Tracks and commits execution results, preventing duplicate concurrent runs.
@@ -472,6 +594,13 @@ export class ResearchExecutionService {
         completedAt: finalSessionStatus === "COMPLETED" ? new Date() : null,
       },
     });
+
+    // Verification Scout step: validate claims across sources before reporting/synthesis
+    try {
+      await this.executeSessionVerification(sessionId);
+    } catch (err: any) {
+      console.error(`[Execution] Verification step failed for session ${sessionId}: ${err.message}`);
+    }
 
     // 7. Retrieve execution statistics
     const sourcesCount = await prisma.source.count({ where: { researchSessionId: sessionId } });

@@ -5,6 +5,7 @@ import { getRedisConnection } from "../queues/research.queue";
 import { ResearchExecutionService } from "../../services/research-execution.service";
 import { JobService } from "../services/job.service";
 import { env } from "../../config";
+import { redis } from "../../lib/redis";
 import type { ResearchTaskJobPayload } from "../types/job.types";
 
 /**
@@ -62,6 +63,91 @@ export const researchTaskWorker = new Worker(
 );
 
 
+  const completedTasksCount = allTasks.filter((t) => t.status === "COMPLETED").length;
+  const failedTasksCount = allTasks.filter((t) => t.status === "FAILED").length;
+
+  const minCompleted = env.RESEARCH_SYNTHESIS_MIN_COMPLETED_TASKS ?? 1;
+
+  if (completedTasksCount >= minCompleted) {
+    // Check if report synthesis was already enqueued or exists to avoid duplicate synthesis runs
+    const existingReport = await prisma.report.findFirst({
+      where: { researchSessionId: sessionId },
+    });
+
+    if (existingReport) {
+      console.log(`[Worker] Report already exists/is generating for session ${sessionId}. Skipping duplicate synthesis trigger.`);
+      return;
+    }
+
+    console.log(`[Worker] Sufficient tasks completed (${completedTasksCount}/${totalTasks}). Running verification step before synthesis.`);
+
+    // Only one terminal worker may verify and enqueue synthesis for a session.
+    const lockKey = `research:verification:${sessionId}`;
+    const lockToken = `${process.pid}:${Date.now()}:${Math.random()}`;
+    const acquired = await redis.set(lockKey, lockToken, "EX", 300, "NX");
+    if (acquired !== "OK") {
+      console.log(`[Worker] Verification is already running for session ${sessionId}. Skipping duplicate terminal trigger.`);
+      return;
+    }
+
+    try {
+      // Verification Scout step: evaluate claim consistency across sources before final synthesis
+      try {
+        await ResearchExecutionService.executeSessionVerification(sessionId);
+      } catch (err: any) {
+        console.error(`[Worker] Verification step failed for session ${sessionId}: ${err.message}. Proceeding to synthesis.`);
+      }
+
+      console.log(`[Worker] Enqueuing SYNTHESIS job.`);
+      await JobService.enqueueSynthesis(sessionId);
+    } finally {
+      // Delete only our lock, so an expired/reacquired lock is never removed by this worker.
+      if (redis.status === "upstash") {
+        await redis.eval(
+          "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+          [lockKey],
+          [lockToken]
+        );
+      } else {
+        await redis.eval(
+          "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+          1,
+          lockKey,
+          lockToken
+        );
+      }
+    }
+  } else {
+    // Insufficient evidence/completed tasks. Mark session as FAILED.
+    console.log(`[Worker] Insufficient completed tasks (${completedTasksCount}/${totalTasks}). Minimum required: ${minCompleted}. Marking session as FAILED.`);
+    
+    await prisma.researchSession.update({
+      where: { id: sessionId },
+      data: {
+        status: "FAILED",
+        completedAt: null,
+      },
+    });
+
+    const firstTaskId = allTasks[0]?.id;
+
+    // Create a failed AgentRun log for Synthesis tracking
+    if (firstTaskId) {
+      await prisma.agentRun.create({
+        data: {
+          researchSessionId: sessionId,
+          researchTaskId: firstTaskId, // Synthesized root task ID
+          agentType: "SYNTHESIS",
+          status: "FAILED",
+          input: { reason: "Insufficient completed research tasks to trigger report synthesis." } as any,
+          error: `Insufficient completed tasks. Completed: ${completedTasksCount}, Failed: ${failedTasksCount}, Required: ${minCompleted}`,
+          startedAt: new Date(),
+          completedAt: new Date(),
+        },
+      });
+    }
+  }
+}
 
 // Log worker events for observability
 researchTaskWorker.on("completed", (job) => {

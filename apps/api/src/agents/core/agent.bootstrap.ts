@@ -7,6 +7,7 @@ import { SourceAgent } from "../research/source.agent";
 import { EvidenceAgent } from "../research/evidence.agent";
 import { ClaimAgent } from "../research/claim.agent";
 import { CriticAgent } from "../research/critic.agent";
+import { VerificationScout } from "../research/verification.agent";
 import { SynthesisAgent } from "../research/synthesis.agent";
 
 /**
@@ -25,6 +26,7 @@ export function bootstrapAgents(): void {
   AgentRegistry.register(new EvidenceAgent());
   AgentRegistry.register(new ClaimAgent());
   AgentRegistry.register(new CriticAgent());
+  AgentRegistry.register(new VerificationScout());
   AgentRegistry.register(new SynthesisAgent());
 
   console.log(`📡 Registered ${AgentRegistry.list().length} agents in AgentRegistry`);

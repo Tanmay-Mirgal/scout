@@ -6,6 +6,7 @@ import { SourceAgent } from "../../agents/research/source.agent";
 import { EvidenceAgent } from "../../agents/research/evidence.agent";
 import { ClaimAgent } from "../../agents/research/claim.agent";
 import { CriticAgent } from "../../agents/research/critic.agent";
+import { VerificationScout } from "../../agents/research/verification.agent";
 import { ResearchPlanningService } from "../research-planning.service";
 import { ResearchExecutionService } from "../research-execution.service";
 import { buildApp } from "../../app";
@@ -172,6 +173,7 @@ describe("SCOUT Research Intelligence Pipeline Service Tests", () => {
     AgentRegistry.register(new EvidenceAgent());
     AgentRegistry.register(new ClaimAgent());
     AgentRegistry.register(new CriticAgent());
+    AgentRegistry.register(new VerificationScout());
 
     // Setup default Prisma mock returns
     (prisma.user.upsert as any).mockResolvedValue(mockUser);
@@ -367,6 +369,43 @@ describe("SCOUT Research Intelligence Pipeline Service Tests", () => {
       expect(prisma.evidence.create).toHaveBeenCalled();
       expect(prisma.claim.create).toHaveBeenCalled();
       expect(prisma.claimEvidence.upsert).toHaveBeenCalled();
+    });
+
+    it("should verify against evidence before promoting claim status", async () => {
+      vi.mocked(prisma.researchSession.findUnique).mockResolvedValue({
+        ...mockSession,
+        tasks: mockTasksList,
+      } as any);
+      vi.mocked(prisma.claim.findMany).mockResolvedValue([
+        { id: "claim-123", content: "Lithium batteries reach 90% efficiency", status: "UNVERIFIED", confidenceScore: null, reasoning: null },
+      ] as any);
+      vi.mocked(prisma.source.findMany).mockResolvedValue([
+        {
+          id: "source-123",
+          title: "Grid storage report",
+          url: "https://example.com/report",
+          publisher: "Energy Lab",
+          credibilityScore: 0.9,
+          evidence: [{ content: "Measured round-trip efficiency was 90%.", summary: "Efficiency result" }],
+        },
+      ] as any);
+      mockGenerateStructured.mockResolvedValueOnce({
+        verifiedClaims: [{ claimIndex: 0, confidenceScore: 0.9, reasoning: "Backed by the measurement", supportingSourceIndexes: [0] }],
+        unsupportedClaims: [],
+        contradictions: [],
+      });
+
+      await ResearchExecutionService.executeSessionVerification(mockSession.id);
+
+      expect(prisma.agentRun.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ agentType: "VERIFICATION" }),
+      }));
+      expect(prisma.claim.update).toHaveBeenCalledWith({
+        where: { id: "claim-123" },
+        data: expect.objectContaining({ status: "SUPPORTED", confidenceScore: 0.9 }),
+      });
+      const runInput = vi.mocked(prisma.agentRun.create).mock.calls[0][0].data.input as any;
+      expect(runInput.context).toContain("Measured round-trip efficiency was 90%");
     });
 
     it("should prevent concurrent execution of the same research session", async () => {
