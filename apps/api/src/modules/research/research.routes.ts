@@ -642,6 +642,99 @@ export async function researchRoutes(app: FastifyInstance) {
     },
     ResearchController.streamSessionEvents
   );
+
+  // POST /api/v1/research-sessions/:id/contradictions/analyze
+  app.post(
+    "/research-sessions/:id/contradictions/analyze",
+    {
+      schema: {
+        description: "Run automated pairwise claim contradiction & disagreement scoring engine",
+        tags: ["Contradiction Detection"],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: {
+                type: "object",
+                properties: {
+                  sessionId: { type: "string", format: "uuid" },
+                  totalClaims: { type: "integer" },
+                  contradictionCount: { type: "integer" },
+                  overallDisagreementScore: { type: "number" },
+                  contradictions: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        claimId: { type: "string" },
+                        claimContent: { type: "string" },
+                        evidenceId: { type: "string" },
+                        evidenceContent: { type: "string" },
+                        strength: { type: "number" },
+                        explanation: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    ResearchController.analyzeContradictions
+  );
+
+  // GET /api/v1/research-sessions/:id/contradictions
+  app.get(
+    "/research-sessions/:id/contradictions",
+    {
+      schema: {
+        description: "Get all detected claim contradictions for a research session",
+        tags: ["Contradiction Detection"],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    claimId: { type: "string" },
+                    claimContent: { type: "string" },
+                    evidenceId: { type: "string" },
+                    evidenceContent: { type: "string" },
+                    strength: { type: "number" },
+                    explanation: { type: "string" },
+                  },
+                },
+              },
+              total: { type: "integer" },
+            },
+          },
+        },
+      },
+    },
+    ResearchController.getContradictions
+  );
 }
+
 
 
