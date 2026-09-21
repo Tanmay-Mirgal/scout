@@ -10,6 +10,7 @@ import {
   evidenceQuerySchema,
   claimsQuerySchema,
   searchEvidenceSchema,
+  exportReportQuerySchema,
 } from "./research.schema";
 import { ResearchPlanningService } from "../../services/research-planning.service";
 import { ResearchExecutionService } from "../../services/research-execution.service";
@@ -558,7 +559,37 @@ export class ResearchController {
       data: usage,
     });
   }
+
+  /**
+   * Exports a research report in Markdown, HTML, or JSON-LD format with headers.
+   */
+  static async exportReport(request: FastifyRequest, reply: FastifyReply) {
+    const devUser = await ResearchService.getOrCreateDevUser();
+    const validatedParams = sessionParamsSchema.parse(request.params);
+    const validatedQuery = exportReportQuerySchema.parse(request.query);
+
+    const result = await ResearchService.exportReport(
+      validatedParams.id,
+      devUser.id,
+      validatedQuery.format
+    );
+
+    if (!result) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `Research session with ID ${validatedParams.id} not found`,
+        },
+      });
+    }
+
+    reply.header("Content-Type", result.contentType);
+    reply.header("Content-Disposition", `attachment; filename="${result.filename}"`);
+    return reply.status(200).send(result.content);
+  }
 }
+
 
 
 

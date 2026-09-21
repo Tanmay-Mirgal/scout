@@ -774,7 +774,39 @@ export async function researchRoutes(app: FastifyInstance) {
     },
     ResearchController.getSessionUsage
   );
+
+  // GET /api/v1/research-sessions/:id/reports/export
+  app.get(
+    "/research-sessions/:id/reports/export",
+    {
+      schema: {
+        description: "Export research report in Markdown, HTML, or JSON-LD format with citation tree",
+        tags: ["Report Export Engine"],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            format: { type: "string", enum: ["markdown", "html", "jsonld"], default: "markdown" },
+          },
+        },
+        response: {
+          200: {
+            type: "string",
+            description: "Formatted document content file string (Markdown, HTML, or JSON-LD)",
+          },
+        },
+      },
+    },
+    ResearchController.exportReport
+  );
 }
+
 
 
 

@@ -12,6 +12,7 @@ import type {
 import { HybridSearchService } from "../../services/hybrid-search.service";
 import { ContradictionEngineService } from "../../services/contradiction-engine.service";
 import { TokenBudgetService } from "../../services/token-budget.service";
+import { ReportExportService, ExportFormat } from "../../services/report-export.service";
 import { ResearchSessionStatus } from "@prisma/client";
 
 /**
@@ -322,7 +323,15 @@ export class ResearchService {
   static async getSessionUsage(sessionId: string, userId: string) {
     return TokenBudgetService.getSessionUsage(sessionId, userId);
   }
+
+  /**
+   * Exports a research report in Markdown, HTML, or JSON-LD format with citation tree.
+   */
+  static async exportReport(sessionId: string, userId: string, format: ExportFormat) {
+    return ReportExportService.exportReport(sessionId, userId, format);
+  }
 }
+
 
 
 
