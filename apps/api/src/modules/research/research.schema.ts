@@ -203,3 +203,13 @@ export const searchEvidenceSchema = z.object({
 
 export type SearchEvidenceInput = z.infer<typeof searchEvidenceSchema>;
 
+/**
+ * Zod validation schema for report export format query.
+ */
+export const exportReportQuerySchema = z.object({
+  format: z.enum(["markdown", "html", "jsonld"]).optional().default("markdown"),
+});
+
+export type ExportReportQuery = z.infer<typeof exportReportQuerySchema>;
+
+
