@@ -14,6 +14,7 @@ import {
 import { ResearchPlanningService } from "../../services/research-planning.service";
 import { ResearchExecutionService } from "../../services/research-execution.service";
 import { ResearchSessionExecutionService } from "../../services/research-session-execution.service";
+import { AgentStreamService, AgentStreamEvent } from "../../services/agent-stream.service";
 import { prisma } from "../../lib/prisma";
 
 /**
@@ -417,5 +418,74 @@ export class ResearchController {
       total: results.length,
     });
   }
+
+  /**
+   * Fastify SSE handler streaming real-time agent execution progress events.
+   */
+  static async streamSessionEvents(request: FastifyRequest, reply: FastifyReply) {
+    const devUser = await ResearchService.getOrCreateDevUser();
+    const validatedParams = sessionParamsSchema.parse(request.params);
+    const sessionId = validatedParams.id;
+
+    const session = await ResearchService.getSessionById(sessionId, devUser.id);
+    if (!session) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `Research session with ID ${sessionId} not found`,
+        },
+      });
+    }
+
+    // Configure Fastify reply for Server-Sent Events (SSE)
+    reply.raw.setHeader("Content-Type", "text/event-stream");
+    reply.raw.setHeader("Cache-Control", "no-cache, no-transform");
+    reply.raw.setHeader("Connection", "keep-alive");
+    reply.raw.setHeader("X-Accel-Buffering", "no");
+    reply.raw.flushHeaders();
+
+    // Helper to format and write SSE data frames
+    const sendSSE = (event: AgentStreamEvent) => {
+      reply.raw.write(`event: ${event.type}\n`);
+      reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+
+    // Send initial handshake frame
+    sendSSE({
+      type: "CONNECTED",
+      sessionId,
+      timestamp: new Date().toISOString(),
+      payload: { status: session.status },
+    });
+
+    // Event listener subscription
+    const listener = (event: AgentStreamEvent) => {
+      sendSSE(event);
+    };
+
+    AgentStreamService.subscribe(sessionId, listener);
+
+    // Periodic heartbeat to prevent client socket timeout
+    if (process.env.NODE_ENV !== "test") {
+      const heartbeatInterval = setInterval(() => {
+        reply.raw.write(`: heartbeat ${new Date().toISOString()}\n\n`);
+      }, 15000);
+
+      // Socket disconnection teardown
+      request.raw.on("close", () => {
+        clearInterval(heartbeatInterval);
+        AgentStreamService.unsubscribe(sessionId, listener);
+      });
+    } else {
+      request.raw.on("close", () => {
+        AgentStreamService.unsubscribe(sessionId, listener);
+      });
+      // In test environment, end response stream after flushing so app.inject resolves
+      reply.raw.end();
+    }
+  }
 }
+
+
 
