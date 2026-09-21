@@ -11,6 +11,7 @@ import {
   claimsQuerySchema,
   searchEvidenceSchema,
   exportReportQuerySchema,
+  scrapeSourceSchema,
 } from "./research.schema";
 import { ResearchPlanningService } from "../../services/research-planning.service";
 import { ResearchExecutionService } from "../../services/research-execution.service";
@@ -588,7 +589,38 @@ export class ResearchController {
     reply.header("Content-Disposition", `attachment; filename="${result.filename}"`);
     return reply.status(200).send(result.content);
   }
+
+  /**
+   * Scrapes web HTML metadata and computes domain & source credibility scores for a session.
+   */
+  static async scrapeSource(request: FastifyRequest, reply: FastifyReply) {
+    const devUser = await ResearchService.getOrCreateDevUser();
+    const validatedParams = sessionParamsSchema.parse(request.params);
+    const validatedBody = scrapeSourceSchema.parse(request.body);
+
+    const result = await ResearchService.scrapeAndScoreSource(
+      validatedParams.id,
+      devUser.id,
+      validatedBody
+    );
+
+    if (!result) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `Research session with ID ${validatedParams.id} not found`,
+        },
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      data: result,
+    });
+  }
 }
+
 
 
 

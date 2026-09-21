@@ -212,4 +212,19 @@ export const exportReportQuerySchema = z.object({
 
 export type ExportReportQuery = z.infer<typeof exportReportQuerySchema>;
 
+/**
+ * Zod validation schema for scraping and scoring web sources.
+ */
+export const scrapeSourceSchema = z.object({
+  url: z
+    .string({ required_error: "url is required" })
+    .trim()
+    .url("url must be a valid HTTP/HTTPS URL"),
+  sourceType: z.nativeEnum(SourceType).optional().default(SourceType.WEBSITE),
+  htmlContent: z.string().optional(),
+});
+
+export type ScrapeSourceInput = z.infer<typeof scrapeSourceSchema>;
+
+
 

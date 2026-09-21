@@ -805,7 +805,45 @@ export async function researchRoutes(app: FastifyInstance) {
     },
     ResearchController.exportReport
   );
+
+  // POST /api/v1/research-sessions/:id/sources/scrape
+  app.post(
+    "/research-sessions/:id/sources/scrape",
+    {
+      schema: {
+        description: "Scrape HTML metadata and evaluate domain/source credibility score for a research session source",
+        tags: ["Source Credibility & Scraper"],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["url"],
+          properties: {
+            url: { type: "string", format: "uri" },
+            sourceType: { type: "string" },
+            htmlContent: { type: "string" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "object", additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    ResearchController.scrapeSource
+  );
 }
+
 
 
 

@@ -13,6 +13,7 @@ import { HybridSearchService } from "../../services/hybrid-search.service";
 import { ContradictionEngineService } from "../../services/contradiction-engine.service";
 import { TokenBudgetService } from "../../services/token-budget.service";
 import { ReportExportService, ExportFormat } from "../../services/report-export.service";
+import { SourceScraperService } from "../../services/source-scraper.service";
 import { ResearchSessionStatus } from "@prisma/client";
 
 /**
@@ -330,7 +331,27 @@ export class ResearchService {
   static async exportReport(sessionId: string, userId: string, format: ExportFormat) {
     return ReportExportService.exportReport(sessionId, userId, format);
   }
+
+  /**
+   * Scrapes web metadata and computes domain/source credibility scores for a research session source.
+   */
+  static async scrapeAndScoreSource(
+    sessionId: string,
+    userId: string,
+    params: { url: string; sourceType?: any; htmlContent?: string }
+  ) {
+    const session = await this.getSessionById(sessionId, userId);
+    if (!session) return null;
+
+    return SourceScraperService.scrapeAndScoreSource({
+      researchSessionId: sessionId,
+      url: params.url,
+      sourceType: params.sourceType,
+      htmlContent: params.htmlContent,
+    });
+  }
 }
+
 
 
 
