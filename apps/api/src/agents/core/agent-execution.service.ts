@@ -1,6 +1,7 @@
 import { AgentRegistry } from "./agent.registry";
 import type { AgentContext, AgentResult } from "./agent.types";
 import { AgentStreamService } from "../../services/agent-stream.service";
+import { TokenBudgetService } from "../../services/token-budget.service";
 
 /**
  * Service orchestrating validation and execution lifecycle of SCOUT agents.
@@ -26,7 +27,19 @@ export class AgentExecutionService {
         };
       }
 
+      // 3. Enforce token usage budget limit
       if (sessionId) {
+        const budgetCheck = await TokenBudgetService.checkBudget(sessionId);
+        if (!budgetCheck.allowed) {
+          const budgetError = `Research session token budget exceeded (${budgetCheck.usedTokens}/${budgetCheck.maxTokens} tokens). Execution halted.`;
+          return {
+            success: false,
+            output: "",
+            error: budgetError,
+            metadata: { code: "SESSION_BUDGET_EXCEEDED" },
+          };
+        }
+
         AgentStreamService.publish({
           type: "AGENT_STARTED",
           sessionId,
@@ -39,8 +52,19 @@ export class AgentExecutionService {
         });
       }
 
-      // 3. Invoke agent workflow
+      // 4. Invoke agent workflow
       const result = await agent.execute(context);
+
+      // 5. Record LLM token consumption metrics
+      if (sessionId) {
+        const usage = result.metadata?.usage || { promptTokens: 120, completionTokens: 180 };
+        await TokenBudgetService.recordUsage(
+          sessionId,
+          agentType,
+          usage.promptTokens || 100,
+          usage.completionTokens || 150
+        );
+      }
 
       if (sessionId) {
         if (result.success) {

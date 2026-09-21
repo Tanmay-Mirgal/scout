@@ -11,6 +11,7 @@ import type {
 } from "./research.schema";
 import { HybridSearchService } from "../../services/hybrid-search.service";
 import { ContradictionEngineService } from "../../services/contradiction-engine.service";
+import { TokenBudgetService } from "../../services/token-budget.service";
 import { ResearchSessionStatus } from "@prisma/client";
 
 /**
@@ -314,6 +315,14 @@ export class ResearchService {
   static async getContradictions(sessionId: string, userId: string) {
     return ContradictionEngineService.getSessionContradictions(sessionId, userId);
   }
+
+  /**
+   * Retrieves token usage and budget metrics for a research session.
+   */
+  static async getSessionUsage(sessionId: string, userId: string) {
+    return TokenBudgetService.getSessionUsage(sessionId, userId);
+  }
 }
+
 
 

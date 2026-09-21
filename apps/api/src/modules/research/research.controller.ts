@@ -534,7 +534,32 @@ export class ResearchController {
       total: contradictions.length,
     });
   }
+
+  /**
+   * Retrieves token consumption and budget metrics for a session.
+   */
+  static async getSessionUsage(request: FastifyRequest, reply: FastifyReply) {
+    const devUser = await ResearchService.getOrCreateDevUser();
+    const validatedParams = sessionParamsSchema.parse(request.params);
+
+    const usage = await ResearchService.getSessionUsage(validatedParams.id, devUser.id);
+    if (!usage) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `Research session with ID ${validatedParams.id} not found`,
+        },
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      data: usage,
+    });
+  }
 }
+
 
 
 
