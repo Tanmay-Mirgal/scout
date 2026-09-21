@@ -485,7 +485,57 @@ export class ResearchController {
       reply.raw.end();
     }
   }
+
+  /**
+   * Triggers session-wide pairwise claim contradiction analysis.
+   */
+  static async analyzeContradictions(request: FastifyRequest, reply: FastifyReply) {
+    const devUser = await ResearchService.getOrCreateDevUser();
+    const validatedParams = sessionParamsSchema.parse(request.params);
+
+    const report = await ResearchService.analyzeContradictions(validatedParams.id, devUser.id);
+    if (!report) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `Research session with ID ${validatedParams.id} not found`,
+        },
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      data: report,
+    });
+  }
+
+  /**
+   * Lists all detected claim contradictions for a research session.
+   */
+  static async getContradictions(request: FastifyRequest, reply: FastifyReply) {
+    const devUser = await ResearchService.getOrCreateDevUser();
+    const validatedParams = sessionParamsSchema.parse(request.params);
+
+    const contradictions = await ResearchService.getContradictions(validatedParams.id, devUser.id);
+    if (!contradictions) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `Research session with ID ${validatedParams.id} not found`,
+        },
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      data: contradictions,
+      total: contradictions.length,
+    });
+  }
 }
+
 
 
 

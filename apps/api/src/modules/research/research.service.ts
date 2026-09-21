@@ -10,6 +10,7 @@ import type {
   SearchEvidenceInput
 } from "./research.schema";
 import { HybridSearchService } from "../../services/hybrid-search.service";
+import { ContradictionEngineService } from "../../services/contradiction-engine.service";
 import { ResearchSessionStatus } from "@prisma/client";
 
 /**
@@ -299,5 +300,20 @@ export class ResearchService {
       minRelevanceScore: input.minRelevanceScore,
     });
   }
+
+  /**
+   * Triggers automated pairwise claim contradiction analysis for a session.
+   */
+  static async analyzeContradictions(sessionId: string, userId: string) {
+    return ContradictionEngineService.analyzeSessionContradictions(sessionId, userId);
+  }
+
+  /**
+   * Retrieves all detected claim contradictions for a research session.
+   */
+  static async getContradictions(sessionId: string, userId: string) {
+    return ContradictionEngineService.getSessionContradictions(sessionId, userId);
+  }
 }
+
 
