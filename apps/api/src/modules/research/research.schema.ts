@@ -226,5 +226,20 @@ export const scrapeSourceSchema = z.object({
 
 export type ScrapeSourceInput = z.infer<typeof scrapeSourceSchema>;
 
+/**
+ * Zod validation schema for tabular data extraction and chart generation.
+ */
+export const generateChartSchema = z.object({
+  text: z
+    .string({ required_error: "text or tabular data is required" })
+    .trim()
+    .min(5, "text must be at least 5 characters"),
+  chartType: z.enum(["bar", "line", "pie", "radar"]).optional(),
+  title: z.string().optional(),
+});
+
+export type GenerateChartInput = z.infer<typeof generateChartSchema>;
+
+
 
 

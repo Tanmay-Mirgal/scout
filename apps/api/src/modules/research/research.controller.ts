@@ -12,6 +12,7 @@ import {
   searchEvidenceSchema,
   exportReportQuerySchema,
   scrapeSourceSchema,
+  generateChartSchema,
 } from "./research.schema";
 import { ResearchPlanningService } from "../../services/research-planning.service";
 import { ResearchExecutionService } from "../../services/research-execution.service";
@@ -619,7 +620,63 @@ export class ResearchController {
       data: result,
     });
   }
+
+  /**
+   * Generates a declarative statistical chart spec from raw text/tabular data.
+   */
+  static async generateChart(request: FastifyRequest, reply: FastifyReply) {
+    const devUser = await ResearchService.getOrCreateDevUser();
+    const validatedParams = sessionParamsSchema.parse(request.params);
+    const validatedBody = generateChartSchema.parse(request.body);
+
+    const result = await ResearchService.generateChartSpec(
+      validatedParams.id,
+      devUser.id,
+      validatedBody as any
+    );
+
+    if (!result) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `Research session with ID ${validatedParams.id} not found`,
+        },
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      data: result,
+    });
+  }
+
+  /**
+   * Retrieves extracted chart specs generated from session evidence.
+   */
+  static async getSessionCharts(request: FastifyRequest, reply: FastifyReply) {
+    const devUser = await ResearchService.getOrCreateDevUser();
+    const validatedParams = sessionParamsSchema.parse(request.params);
+
+    const result = await ResearchService.getSessionCharts(validatedParams.id, devUser.id);
+
+    if (!result) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `Research session with ID ${validatedParams.id} not found`,
+        },
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      data: result,
+    });
+  }
 }
+
 
 
 

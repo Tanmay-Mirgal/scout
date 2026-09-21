@@ -14,6 +14,7 @@ import { ContradictionEngineService } from "../../services/contradiction-engine.
 import { TokenBudgetService } from "../../services/token-budget.service";
 import { ReportExportService, ExportFormat } from "../../services/report-export.service";
 import { SourceScraperService } from "../../services/source-scraper.service";
+import { DataScoutService, ChartType } from "../../services/datascout-chart.service";
 import { ResearchSessionStatus } from "@prisma/client";
 
 /**
@@ -350,7 +351,32 @@ export class ResearchService {
       htmlContent: params.htmlContent,
     });
   }
+
+  /**
+   * Generates a declarative chart specification from raw tabular text or evidence.
+   */
+  static async generateChartSpec(
+    sessionId: string,
+    userId: string,
+    params: { text: string; chartType?: ChartType; title?: string }
+  ) {
+    const session = await this.getSessionById(sessionId, userId);
+    if (!session) return null;
+
+    return DataScoutService.generateChartSpec(params.text, params.chartType, params.title, sessionId);
+  }
+
+  /**
+   * Scans session evidence records and generates interactive statistical chart specs.
+   */
+  static async getSessionCharts(sessionId: string, userId: string) {
+    const session = await this.getSessionById(sessionId, userId);
+    if (!session) return null;
+
+    return DataScoutService.processSessionCharts(sessionId, userId);
+  }
 }
+
 
 
 
