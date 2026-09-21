@@ -617,5 +617,31 @@ export async function researchRoutes(app: FastifyInstance) {
     },
     ResearchController.searchEvidence
   );
+
+  // GET /api/v1/research-sessions/:id/stream
+  app.get(
+    "/research-sessions/:id/stream",
+    {
+      schema: {
+        description: "Stream real-time agent execution events and workflow progress (Server-Sent Events)",
+        tags: ["Real-time Stream"],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            type: "string",
+            description: "Server-Sent Events text stream (text/event-stream)",
+          },
+        },
+      },
+    },
+    ResearchController.streamSessionEvents
+  );
 }
+
 
