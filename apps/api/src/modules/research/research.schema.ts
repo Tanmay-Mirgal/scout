@@ -240,6 +240,29 @@ export const generateChartSchema = z.object({
 
 export type GenerateChartInput = z.infer<typeof generateChartSchema>;
 
+/**
+ * Zod validation schema for HITL checkpoint parameters.
+ */
+export const checkpointParamsSchema = z.object({
+  id: z.string().uuid("id must be a valid UUID"),
+  checkpointId: z.string().min(1, "checkpointId is required"),
+});
+
+/**
+ * Zod validation schema for submitting human decisions on HITL checkpoints.
+ */
+export const submitHitlDecisionSchema = z.object({
+  action: z.enum(["APPROVE", "REJECT", "MODIFY_INPUT"], {
+    errorMap: () => ({ message: "action must be APPROVE, REJECT, or MODIFY_INPUT" }),
+  }),
+  modifiedInput: z.record(z.any()).optional(),
+  feedback: z.string().optional(),
+});
+
+export type CheckpointParams = z.infer<typeof checkpointParamsSchema>;
+export type SubmitHitlDecisionInput = z.infer<typeof submitHitlDecisionSchema>;
+
+
 
 
 

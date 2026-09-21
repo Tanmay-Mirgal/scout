@@ -907,7 +907,74 @@ export async function researchRoutes(app: FastifyInstance) {
     },
     ResearchController.getSessionCharts
   );
+
+  // GET /api/v1/research-sessions/:id/hitl/checkpoints
+  app.get(
+    "/research-sessions/:id/hitl/checkpoints",
+    {
+      schema: {
+        description: "List active Human-in-the-Loop workflow breakpoints and pending decision checkpoints",
+        tags: ["Human-in-the-Loop (HITL) Engine"],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+        },
+      },
+    },
+    ResearchController.getHitlCheckpoints
+  );
+
+  // POST /api/v1/research-sessions/:id/hitl/checkpoints/:checkpointId/decision
+  app.post(
+    "/research-sessions/:id/hitl/checkpoints/:checkpointId/decision",
+    {
+      schema: {
+        description: "Submit human approval, rejection, or modified input decision to resume/replay workflow",
+        tags: ["Human-in-the-Loop (HITL) Engine"],
+        params: {
+          type: "object",
+          required: ["id", "checkpointId"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+            checkpointId: { type: "string" },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["action"],
+          properties: {
+            action: { type: "string", enum: ["APPROVE", "REJECT", "MODIFY_INPUT"] },
+            modifiedInput: { type: "object", additionalProperties: true },
+            feedback: { type: "string" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "object", additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    ResearchController.submitHitlDecision
+  );
 }
+
 
 
 
