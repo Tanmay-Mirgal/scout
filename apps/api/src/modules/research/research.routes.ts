@@ -734,7 +734,48 @@ export async function researchRoutes(app: FastifyInstance) {
     },
     ResearchController.getContradictions
   );
+
+  // GET /api/v1/research-sessions/:id/usage
+  app.get(
+    "/research-sessions/:id/usage",
+    {
+      schema: {
+        description: "Get token consumption and budget metrics for a research session",
+        tags: ["Resource & Usage Metering"],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: {
+                type: "object",
+                properties: {
+                  sessionId: { type: "string", format: "uuid" },
+                  promptTokens: { type: "integer" },
+                  completionTokens: { type: "integer" },
+                  totalTokens: { type: "integer" },
+                  estimatedCostUsd: { type: "number" },
+                  maxTokens: { type: "integer" },
+                  percentageUsed: { type: "number" },
+                  isExceeded: { type: "boolean" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    ResearchController.getSessionUsage
+  );
 }
+
 
 
 
