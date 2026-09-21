@@ -559,4 +559,63 @@ export async function researchRoutes(app: FastifyInstance) {
     },
     ResearchController.getSessionClaims
   );
+
+  // POST /api/v1/research-sessions/:id/evidence/search
+  app.post(
+    "/research-sessions/:id/evidence/search",
+    {
+      schema: {
+        description: "Perform hybrid RAG semantic vector + keyword search over evidence",
+        tags: ["Evidence Search"],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["query"],
+          properties: {
+            query: { type: "string", minLength: 1, maxLength: 2000 },
+            limit: { type: "integer", default: 10, minimum: 1, maximum: 50 },
+            alpha: { type: "number", default: 0.5, minimum: 0.0, maximum: 1.0 },
+            minRelevanceScore: { type: "number", default: 0.0, minimum: 0.0, maximum: 1.0 },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string", format: "uuid" },
+                    content: { type: "string" },
+                    summary: { type: "string", nullable: true },
+                    location: { type: "string", nullable: true },
+                    relevanceScore: { type: "number", nullable: true },
+                    confidenceScore: { type: "number", nullable: true },
+                    sourceId: { type: "string", format: "uuid" },
+                    researchSessionId: { type: "string", format: "uuid" },
+                    combinedScore: { type: "number" },
+                    vectorScore: { type: "number" },
+                    keywordScore: { type: "number" },
+                    createdAt: { type: "string" },
+                  },
+                },
+              },
+              total: { type: "integer" },
+            },
+          },
+        },
+      },
+    },
+    ResearchController.searchEvidence
+  );
 }
+

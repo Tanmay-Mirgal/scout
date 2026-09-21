@@ -186,3 +186,20 @@ export type TasksQuery = z.infer<typeof tasksQuerySchema>;
 export type SourcesQuery = z.infer<typeof sourcesQuerySchema>;
 export type EvidenceQuery = z.infer<typeof evidenceQuerySchema>;
 export type ClaimsQuery = z.infer<typeof claimsQuerySchema>;
+
+/**
+ * Zod validation schema for hybrid vector evidence RAG search.
+ */
+export const searchEvidenceSchema = z.object({
+  query: z
+    .string({ required_error: "search query is required" })
+    .trim()
+    .min(1, "search query cannot be empty")
+    .max(2000, "search query cannot exceed 2000 characters"),
+  limit: z.number().int().min(1).max(50).optional().default(10),
+  alpha: z.number().min(0.0).max(1.0).optional().default(0.5),
+  minRelevanceScore: z.number().min(0.0).max(1.0).optional().default(0.0),
+});
+
+export type SearchEvidenceInput = z.infer<typeof searchEvidenceSchema>;
+
