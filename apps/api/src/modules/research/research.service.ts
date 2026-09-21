@@ -6,8 +6,10 @@ import type {
   TasksQuery,
   SourcesQuery,
   EvidenceQuery,
-  ClaimsQuery
+  ClaimsQuery,
+  SearchEvidenceInput
 } from "./research.schema";
+import { HybridSearchService } from "../../services/hybrid-search.service";
 import { ResearchSessionStatus } from "@prisma/client";
 
 /**
@@ -277,4 +279,25 @@ export class ResearchService {
       },
     };
   }
+
+  /**
+   * Performs RAG hybrid vector and keyword search over evidence for a research session.
+   */
+  static async searchEvidence(
+    sessionId: string,
+    userId: string,
+    input: SearchEvidenceInput
+  ) {
+    const session = await this.getSessionById(sessionId, userId);
+    if (!session) return null;
+
+    return HybridSearchService.searchEvidence({
+      sessionId,
+      query: input.query,
+      limit: input.limit,
+      alpha: input.alpha,
+      minRelevanceScore: input.minRelevanceScore,
+    });
+  }
 }
+
