@@ -842,7 +842,73 @@ export async function researchRoutes(app: FastifyInstance) {
     },
     ResearchController.scrapeSource
   );
+
+  // POST /api/v1/research-sessions/:id/charts/generate
+  app.post(
+    "/research-sessions/:id/charts/generate",
+    {
+      schema: {
+        description: "Extract tabular numerical data and generate statistical chart visualization specifications",
+        tags: ["DataScout & Charts"],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["text"],
+          properties: {
+            text: { type: "string" },
+            chartType: { type: "string", enum: ["bar", "line", "pie", "radar"] },
+            title: { type: "string" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "object", additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    ResearchController.generateChart
+  );
+
+  // GET /api/v1/research-sessions/:id/charts
+  app.get(
+    "/research-sessions/:id/charts",
+    {
+      schema: {
+        description: "Retrieve generated statistical chart specifications extracted from session evidence",
+        tags: ["DataScout & Charts"],
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+        },
+      },
+    },
+    ResearchController.getSessionCharts
+  );
 }
+
 
 
 
