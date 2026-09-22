@@ -13,6 +13,8 @@ import {
   exportReportQuerySchema,
   scrapeSourceSchema,
   generateChartSchema,
+  checkpointParamsSchema,
+  submitHitlDecisionSchema,
 } from "./research.schema";
 import { ResearchPlanningService } from "../../services/research-planning.service";
 import { ResearchExecutionService } from "../../services/research-execution.service";
@@ -675,7 +677,64 @@ export class ResearchController {
       data: result,
     });
   }
+
+  /**
+   * Retrieves pending or active HITL breakpoints for a research session.
+   */
+  static async getHitlCheckpoints(request: FastifyRequest, reply: FastifyReply) {
+    const devUser = await ResearchService.getOrCreateDevUser();
+    const validatedParams = sessionParamsSchema.parse(request.params);
+
+    const result = await ResearchService.getHitlCheckpoints(validatedParams.id, devUser.id);
+
+    if (!result) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `Research session with ID ${validatedParams.id} not found`,
+        },
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      data: result,
+    });
+  }
+
+  /**
+   * Submits a human decision on a paused HITL breakpoint and resumes/replays workflow execution.
+   */
+  static async submitHitlDecision(request: FastifyRequest, reply: FastifyReply) {
+    const devUser = await ResearchService.getOrCreateDevUser();
+    const validatedParams = checkpointParamsSchema.parse(request.params);
+    const validatedBody = submitHitlDecisionSchema.parse(request.body);
+
+    const result = await ResearchService.submitHitlDecision(
+      validatedParams.id,
+      devUser.id,
+      validatedParams.checkpointId,
+      validatedBody
+    );
+
+    if (!result) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `Research session or HITL checkpoint not found`,
+        },
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      data: result,
+    });
+  }
 }
+
 
 
 

@@ -15,6 +15,7 @@ import { TokenBudgetService } from "../../services/token-budget.service";
 import { ReportExportService, ExportFormat } from "../../services/report-export.service";
 import { SourceScraperService } from "../../services/source-scraper.service";
 import { DataScoutService, ChartType } from "../../services/datascout-chart.service";
+import { HITLWorkflowEngine, HITLAction } from "../../services/hitl-workflow.service";
 import { ResearchSessionStatus } from "@prisma/client";
 
 /**
@@ -375,7 +376,40 @@ export class ResearchService {
 
     return DataScoutService.processSessionCharts(sessionId, userId);
   }
+
+  /**
+   * Retrieves all active HITL breakpoints/checkpoints for a session.
+   */
+  static async getHitlCheckpoints(sessionId: string, userId: string, pendingOnly: boolean = false) {
+    const session = await this.getSessionById(sessionId, userId);
+    if (!session) return null;
+
+    return HITLWorkflowEngine.getSessionCheckpoints(sessionId, userId, pendingOnly);
+  }
+
+  /**
+   * Submits a human decision on a HITL checkpoint and resumes or cancels workflow execution.
+   */
+  static async submitHitlDecision(
+    sessionId: string,
+    userId: string,
+    checkpointId: string,
+    params: { action: HITLAction; modifiedInput?: any; feedback?: string }
+  ) {
+    const session = await this.getSessionById(sessionId, userId);
+    if (!session) return null;
+
+    return HITLWorkflowEngine.submitDecision({
+      sessionId,
+      userId,
+      checkpointId,
+      action: params.action,
+      modifiedInput: params.modifiedInput,
+      feedback: params.feedback,
+    });
+  }
 }
+
 
 
 
