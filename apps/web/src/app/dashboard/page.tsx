@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ResearchSessionsApi } from "@/lib/api/research-sessions";
 import { ResearchSession, ResearchSessionStatus } from "@/lib/api/types";
 import { ResearchStatusBadge } from "@/components/research/ResearchStatusBadge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate, truncate } from "@/lib/utils";
 import {
   Plus,
@@ -45,6 +46,8 @@ export default function DashboardPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchSessions = useCallback(async () => {
     setLoading(true);
@@ -69,18 +72,44 @@ export default function DashboardPage() {
     fetchSessions();
   }, [fetchSessions]);
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  // Opens the accessible confirmation dialog instead of the native `confirm()`.
+  const requestDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this research session?")) return;
+    setPendingDeleteId(id);
+  };
+
+  const cancelDelete = () => setPendingDeleteId(null);
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
 
     setDeletingId(id);
     try {
       await ResearchSessionsApi.delete(id);
       await fetchSessions();
+      setPendingDeleteId(null);
     } catch (err: any) {
-      alert(`Delete failed: ${err.message}`);
+      // Keep the confirm dialog closed and surface the failure in its own
+      // accessible dialog instead of a blocking native `alert()`.
+      setPendingDeleteId(null);
+      setDeleteError(err.message || "Failed to delete the research session.");
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const pendingDeleteSession = sessions.find((s) => s.id === pendingDeleteId) || null;
+
+  // Keyboard activation for session cards. Cards are focusable divs acting as
+  // links, so Enter/Space must trigger navigation the same way a click does.
+  // Guard against events bubbling up from focusable children (e.g. the
+  // delete button), which already handle their own activation.
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>, sessionId: string) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+      e.preventDefault();
+      router.push(`/research/${sessionId}`);
     }
   };
 
@@ -270,19 +299,25 @@ export default function DashboardPage() {
             {filteredSessions.map((session) => (
               <div
                 key={session.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`Open research session: ${session.title || truncate(session.query, 60)}`}
                 onClick={() => router.push(`/research/${session.id}`)}
-                className="glass-card-hover group relative flex flex-col justify-between rounded-3xl p-6 cursor-pointer"
+                onKeyDown={(e) => handleCardKeyDown(e, session.id)}
+                className="glass-card-hover group relative flex flex-col justify-between rounded-3xl p-6 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-4">
                     <ResearchStatusBadge status={session.status} />
                     <button
-                      onClick={(e) => handleDelete(session.id, e)}
+                      type="button"
+                      onClick={(e) => requestDelete(session.id, e)}
                       disabled={deletingId === session.id}
-                      className="text-slate-500 hover:text-rose-400 transition p-1.5 rounded-lg hover:bg-rose-500/10"
+                      aria-label={`Delete research session: ${session.title || truncate(session.query, 60)}`}
+                      className="text-slate-500 hover:text-rose-400 transition p-1.5 rounded-lg hover:bg-rose-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Delete Session"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </div>
 
@@ -337,6 +372,34 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Accessible confirmation dialog replacing window.confirm() */}
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        variant="danger"
+        title="Delete this research session?"
+        description={
+          pendingDeleteSession
+            ? `"${pendingDeleteSession.title || truncate(pendingDeleteSession.query, 60)}" will be permanently removed. This action cannot be undone.`
+            : "This action cannot be undone."
+        }
+        confirmLabel="Delete Session"
+        cancelLabel="Cancel"
+        isConfirming={deletingId === pendingDeleteId}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
+
+      {/* Accessible error dialog replacing window.alert() */}
+      <ConfirmDialog
+        open={deleteError !== null}
+        alertOnly
+        title="Delete Failed"
+        description={deleteError || undefined}
+        confirmLabel="OK"
+        onConfirm={() => setDeleteError(null)}
+        onCancel={() => setDeleteError(null)}
+      />
     </div>
   );
 }
